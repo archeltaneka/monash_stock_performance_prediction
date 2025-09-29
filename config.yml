@@ -1,0 +1,195 @@
+task: classification
+random_seed: 42
+
+data_builder:
+  data_dir: data
+  stock_data: stock_data.csv
+  company_info: company_info.csv
+  monash_index: monashIndex.csv
+  train_targets: training_targets.csv
+  test_targets: testing_targets.csv
+
+  use_optional_data: false
+  
+  imputation_strategy: ffill
+  build_additional_features:
+    handle_missing_rolling_features_strategy: bfill
+
+data_splitter:
+  last_train_date: '2023_06'
+  test_date: '2023_07'
+
+feature_preprocessor:
+  features_to_exclude: ['month_id', 'stock_id', 'outperform_binary', 'excess_return']
+  categorical_features: ['sector', 'business_model']
+  ordinal_features: ['geographic_focus',
+                     'business_maturity',
+                     'competitive_position',
+                     'market_cap_category',
+                     'revenue_tier',
+                     'profitability_profile',
+                     'asset_intensity',
+                     'financial_strength']
+  numerical_features: ['intramonth_return_rolling_mean_3m',
+                      'intramonth_return_rolling_std_3m',
+                      'intramonth_return_rolling_median_3m',
+                      'intramonth_return_rolling_mean_6m',
+                      'intramonth_return_rolling_std_6m',
+                      'intramonth_return_rolling_median_6m',
+                      'intramonth_return_rolling_mean_12m',
+                      'intramonth_return_rolling_std_12m',
+                      'intramonth_return_rolling_median_12m',
+                      'return_1m_lagged_1',
+                      'return_1m_lagged_2',
+                      'return_3m_lagged_1',
+                      'return_3m_lagged_2',
+                      'return_6m_lagged_1',
+                      'return_6m_lagged_2',
+                      'intramonth_volatility_rolling_mean_3m',
+                      'intramonth_volatility_rolling_std_3m',
+                      'intramonth_volatility_rolling_mean_6m',
+                      'intramonth_volatility_rolling_std_6m',
+                      'intramonth_volatility_rolling_mean_12m',
+                      'intramonth_volatility_rolling_std_12m',
+                      'volatility_3m_rolling_mean_3m',
+                      'volatility_3m_rolling_std_3m',
+                      'volatility_3m_rolling_mean_6m',
+                      'volatility_3m_rolling_std_6m',
+                      'volatility_6m_rolling_mean_3m',
+                      'volatility_6m_rolling_std_3m',
+                      'volatility_6m_rolling_mean_6m',
+                      'volatility_6m_rolling_std_6m',
+                      'monthly_volume_rolling_mean_3m',
+                      'monthly_volume_rolling_sum_3m',
+                      'monthly_volume_rolling_mean_6m',
+                      'monthly_volume_rolling_sum_6m',
+                      'avg_volume_3m_rolling_mean_3m',
+                      'avg_volume_3m_rolling_sum_3m',
+                      'avg_volume_3m_rolling_mean_6m',
+                      'avg_volume_3m_rolling_sum_6m',
+                      'volume_ratio_rolling_mean_3m',
+                      'volume_ratio_rolling_sum_3m',
+                      'volume_ratio_rolling_mean_6m',
+                      'volume_ratio_rolling_sum_6m',
+                      'price_range_rolling_mean_3m',
+                      'price_range_ratio_rolling_mean_3m',
+                      'price_range_rolling_mean_6m',
+                      'price_range_ratio_rolling_mean_6m',
+                      'price_range_rolling_mean_12m',
+                      'price_range_ratio_rolling_mean_12m',
+                      'index_return_rolling_mean_3m',
+                      'index_return_rolling_std_3m',
+                      'index_return_rolling_mean_6m',
+                      'index_return_rolling_std_6m']
+
+cross_validation:
+  n_splits: 5
+  window_type: expanding
+  warmup: 12
+
+initial_model:
+  comparison_save_dir: files/model_comparison_result
+  n_splits: 30
+  window_type: expanding
+  warmup: 12
+
+  linear:
+    max_iter: 1000
+
+  comparison_result_save_name: initial_model_result.csv
+
+tuning:
+  model_save_dir: files/models
+  comparison_save_dir: files/model_comparison_result
+  comparison_result_save_name: tuning_model_result.csv
+
+  linear_regression:
+    classification:
+      penalty: ['l1', 'l2']
+      C: [0.01, 0.1, 1, 10, 100]
+      solver: ['liblinear', 'saga']
+    regression:
+      alpha: [0.001, 0.01, 0.1, 1.0, 10.0]
+      l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+
+  random_forest:
+    n_estimators: [100, 500]
+    max_depth: [null, 5, 10, 20, 30]  
+    min_samples_split: [2, 20]
+    min_samples_leaf: [1, 10]   
+    max_features: ["sqrt", "log2", null] 
+
+  svm:
+    C: [0.001, 1000]
+    kernel: ["linear", "rbf", "poly"]
+    gamma: [0.0001, 10] 
+    epsilon: [0.01, 0.1, 0.2, 0.5]
+
+  xgboost:
+    n_estimators: [100, 500]
+    max_depth: [3, 10]
+    learning_rate: [0.01, 0.3]
+    subsample: [0.6, 0.4]
+    colsample_bytree: [0.6, 0.4]
+    gamma: [0, 5]
+    min_child_weight: [1, 10]
+    reg_alpha: [0.001, 10]
+    reg_lambda: [0.001, 10]
+  
+  catboost:
+    iterations: [200, 1000]
+    depth: [4, 10]
+    learning_rate: [0.01, 0.3]
+    l2_leaf_reg: [1, 10]
+    bagging_temperature: [0, 5]
+
+feature_importance:
+  importance_result_dir: files/model_comparison_result
+  importance_result_save_name: feature_importance.csv
+  model_dir: files/models
+  plot_save_dir: files/plots
+  plot_save_name: feature_imp.png
+
+  n_splits: 30
+  window_type: expanding
+  warmup: 12
+
+  bagging_temperature: 1.2051273301300585 
+  depth: 7
+  iterations: 654
+  l2_leaf_reg: 4.073771427235118
+  learning_rate: 0.170110026976697
+
+feature_selection:
+  model_dir: files/models
+  target_model: tuned_catboost_model.pkl
+  plot_save_dir: files/plots
+  plot_save_name: feature_selection.png
+
+  n_splits: 30
+  window_type: expanding
+  warmup: 12
+
+  step: 5
+
+ensemble:
+  n_splits: 30
+  window_type: expanding
+  warmup: 12
+
+  model_dir: files/models
+  linear_model: tuned_linear_regression_model.pkl
+  random_forest_model: tuned_random_forest_model.pkl
+  svm_model: tuned_svm_model.pkl
+  xgboost_model: tuned_xgb_model.pkl
+  catboost_model: tuned_catboost_model.pkl
+  ensemble_model: final_voting_classifier.pkl
+
+  top_k_features: 35
+
+predict:
+  model_dir: files/models
+  ensemble_model: final_voting_classifier.pkl
+  
+  submission_dir: files/submission
+
